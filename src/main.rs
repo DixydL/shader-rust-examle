@@ -2,29 +2,25 @@ extern crate gl;
 extern crate glutin;
 use std::ffi::{CString, CStr};
 
-
+use std::mem;
 use gl::types::*;
 use std::ptr;
 use glutin::GlContext;
 mod shader_mod {
 
-   pub const SHADER_VERTEX: &str = "
-    #version 330 core
-    layout (location = 0) in vec3 position;
-    void main()
-    {
-        gl_Position = vec4(position.x, position.y, position.z, 1.0)
-    }
-    ";
+    pub static SHADER_VERTEX: &'static str =
+        "#version 150\n\
+    in vec2 position;\n\
+    void main() {\n\
+    gl_Position = vec4(position, 0.0, 1.0);\n\
+    }";
 
-    pub const  SHADER_FRAGMENT: &str = "
-    #version 330 core
-    out vec4 color;
-    void main()
-    {
-        color = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-    }
-    ";
+    pub static SHADER_FRAGMENT: &'static str =
+        "#version 150\n\
+    out vec4 out_color;\n\
+    void main() {\n\
+       out_color = vec4(1.0, 1.0, 1.0, 1.0);\n\
+    }";
     pub struct Shader<'a> {
         shader: &'a str
     }
@@ -57,17 +53,49 @@ fn main() {
 
     unsafe {
         gl_window.make_current().unwrap();
+        gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
     }
 
+    let mut VBO : GLuint= 0;
+    let mut VAO : GLuint = 0;
 
     unsafe {
-        gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
         let vertex_shader : GLuint = gl::CreateShader(gl::VERTEX_SHADER);
-        let fShaderCode = CString::new(shader_mod::SHADER_FRAGMENT.as_bytes()).unwrap();
-        gl::ShaderSource(vertex_shader, 1, &fShaderCode.as_ptr(), ptr::null());
+        let vShaderCode = CString::new(shader_mod::SHADER_VERTEX.as_bytes()).unwrap();
+        gl::ShaderSource(vertex_shader, 1, &vShaderCode.as_ptr(), ptr::null());
         gl::CompileShader(vertex_shader);
 
-        gl::ClearColor(0.0, 1.0, 0.0, 1.0);
+        let fragment_shader : GLuint = gl::CreateShader(gl::FRAGMENT_SHADER);
+        let fShaderCode = CString::new(shader_mod::SHADER_FRAGMENT.as_bytes()).unwrap();
+        gl::ShaderSource(fragment_shader, 1, &fShaderCode.as_ptr(), ptr::null());
+        gl::CompileShader(fragment_shader);
+
+        let shader_program :GLuint = gl::CreateProgram();
+        gl::AttachShader(shader_program, vertex_shader);
+        gl::AttachShader(shader_program, fragment_shader);
+        gl::LinkProgram(shader_program);
+
+       // gl::DeleteShader(vertex_shader);
+       // gl::DeleteShader(fragment_shader);
+
+        let vertices :[GLfloat; 6] = [0.0, 0.5, 0.5, -0.5, -0.5, -0.5];
+
+        gl::GenVertexArrays(1, &mut VAO);
+        gl::GenBuffers(1, &mut VBO);
+        // Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
+        gl::BindVertexArray(VAO);
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
+        gl::BufferData(gl::ARRAY_BUFFER,(6*std::mem::size_of::<GLfloat>()) as GLsizeiptr, std::mem::transmute(&vertices), gl::STATIC_DRAW);
+
+        gl::UseProgram(shader_program);
+        gl::BindFragDataLocation(shader_program, 0, CString::new("out_color").unwrap().as_ptr());
+
+        // Specify the layout of the vertex data
+        let pos_attr = gl::GetAttribLocation(shader_program, CString::new("position").unwrap().as_ptr());
+        gl::EnableVertexAttribArray(pos_attr as GLuint);
+        gl::VertexAttribPointer(pos_attr as GLuint, 2, gl::FLOAT,
+                                gl::FALSE as GLboolean, 0, ptr::null());
     }
 
     let mut running = true;
@@ -85,6 +113,7 @@ fn main() {
 
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::DrawArrays(gl::TRIANGLES, 0, 3);
         }
 
         gl_window.swap_buffers().unwrap();
