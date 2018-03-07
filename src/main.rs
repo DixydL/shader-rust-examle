@@ -49,14 +49,32 @@ mod calculate {
 
     }
 }
+
+mod matrix {
+    struct Matrix {
+
+    }
+    impl Matrix {
+
+    }
+}
 mod shader_mod {
 
     pub static SHADER_VERTEX: &'static str =
-        "#version 150\n\
-    in vec2 position;\n\
-    void main() {\n\
-    gl_Position = vec4(position, 0.0, 1.0);\n\
-    }";
+    "
+        #version 330
+        layout (location = 0) in vec2 position;
+        uniform mat4 model;
+        void main() {
+            gl_Position = mat4(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0
+            ) * vec4(position.x,position.y, 1.0, 1.0);
+        }
+    "
+    ;
 
     pub static SHADER_FRAGMENT: &'static str =
         "#version 150\n\
@@ -89,7 +107,7 @@ fn main() {
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new()
         .with_title("Hello, world!")
-        .with_dimensions(1024, 768);
+        .with_dimensions(600, 600);
     let context = glutin::ContextBuilder::new()
         .with_vsync(true);
     let gl_window = glutin::GlWindow::new(window, context, &events_loop).unwrap();
@@ -101,7 +119,15 @@ fn main() {
 
     let mut VBO : GLuint= 0;
     let mut VAO : GLuint = 0;
+    let mut shader_program: GLuint = 0;
 
+    let mat: [f32;16] =
+        [
+            1.0,0.0,0.0,0.0,
+            0.0,1.0,0.0,0.0,
+            0.0,0.0,1.0,0.0,
+            0.0,0.0,0.0,1.0
+        ];
     unsafe {
         let vertex_shader : GLuint = gl::CreateShader(gl::VERTEX_SHADER);
         let vShaderCode = CString::new(shader_mod::SHADER_VERTEX.as_bytes()).unwrap();
@@ -113,7 +139,7 @@ fn main() {
         gl::ShaderSource(fragment_shader, 1, &fShaderCode.as_ptr(), ptr::null());
         gl::CompileShader(fragment_shader);
 
-        let shader_program :GLuint = gl::CreateProgram();
+        shader_program = gl::CreateProgram();
         gl::AttachShader(shader_program, vertex_shader);
         gl::AttachShader(shader_program, fragment_shader);
         gl::LinkProgram(shader_program);
@@ -121,7 +147,13 @@ fn main() {
        // gl::DeleteShader(vertex_shader);
        // gl::DeleteShader(fragment_shader);
 
-        let vertices :[GLfloat; 6] = [0.0, 0.5, 0.5, -0.5, -0.5, -0.5];
+        let vertices :[GLfloat; 6] =
+        [
+             0.1, 0.1,
+             0.3, -0.1, //left
+            -0.1, -0.1 //right
+        ];
+        gl::Viewport(0, 0, 600, 600);
 
         gl::GenVertexArrays(1, &mut VAO);
         gl::GenBuffers(1, &mut VBO);
@@ -129,16 +161,15 @@ fn main() {
         gl::BindVertexArray(VAO);
 
         gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
-        gl::BufferData(gl::ARRAY_BUFFER,(6*std::mem::size_of::<GLfloat>()) as GLsizeiptr, std::mem::transmute(&vertices), gl::DYNAMIC_DRAW);
+        gl::BufferData(gl::ARRAY_BUFFER,(6*std::mem::size_of::<GLfloat>()) as GLsizeiptr, std::mem::transmute(&vertices[0]), gl::DYNAMIC_DRAW);
 
         gl::UseProgram(shader_program);
         gl::BindFragDataLocation(shader_program, 0, CString::new("out_color").unwrap().as_ptr());
 
         // Specify the layout of the vertex data
-        let pos_attr = gl::GetAttribLocation(shader_program, CString::new("position").unwrap().as_ptr());
-        gl::EnableVertexAttribArray(pos_attr as GLuint);
-        gl::VertexAttribPointer(pos_attr as GLuint, 2, gl::FLOAT,
-                                gl::FALSE as GLboolean, 0, ptr::null());
+        gl::VertexAttribPointer(0, 2, gl::FLOAT,
+                                gl::FALSE, 0, ptr::null());
+        gl::EnableVertexAttribArray(0);
     }
     let mut fps = calculate::Fps::new(calculate::get_current_time());
     let mut i = 0;
@@ -156,8 +187,12 @@ fn main() {
         });
 
         unsafe {
+            let model :GLint = gl::GetUniformLocation(shader_program, CString::new("model").unwrap().as_ptr());
+            gl::BindVertexArray(VAO);
+            gl::UniformMatrix4fv(model, 1, gl::FALSE, mat.as_ptr());
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            gl::BindVertexArray(0);
         }
 
         //println!("{:?}",duration.as_secs());
