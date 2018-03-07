@@ -1,11 +1,54 @@
 extern crate gl;
 extern crate glutin;
+
+
 use std::ffi::{CString, CStr};
 
 use std::mem;
 use gl::types::*;
 use std::ptr;
 use glutin::GlContext;
+mod calculate {
+    use std::time::{Duration,SystemTime,UNIX_EPOCH};
+    pub fn get_current_time() -> i32{
+       let time = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs() as i32;
+        time
+    }
+    pub struct Fps{
+        i: i32,
+        time_now: i32,
+        time_before: i32,
+        fps: f32,
+    }
+
+    impl Fps {
+        pub fn new(time_now :i32) -> Fps {
+            Fps {
+                i : 0,
+                time_now : 0,
+                time_before : get_current_time(),
+                fps: 0 as f32,
+            }
+        }
+        fn fps_calculate(&mut self) -> f32 {
+            self.time_now = get_current_time();
+            self.i += 1;
+            let different = self.time_now - self.time_before;
+            if different >= 1 {
+                self.time_before = get_current_time();
+                self.fps = self.i as f32;
+                self.i = 0;
+            }
+
+            self.fps
+        }
+
+        pub fn show_fps(&mut self) {
+            println!("{}",self.fps_calculate())
+        }
+
+    }
+}
 mod shader_mod {
 
     pub static SHADER_VERTEX: &'static str =
@@ -86,7 +129,7 @@ fn main() {
         gl::BindVertexArray(VAO);
 
         gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
-        gl::BufferData(gl::ARRAY_BUFFER,(6*std::mem::size_of::<GLfloat>()) as GLsizeiptr, std::mem::transmute(&vertices), gl::STATIC_DRAW);
+        gl::BufferData(gl::ARRAY_BUFFER,(6*std::mem::size_of::<GLfloat>()) as GLsizeiptr, std::mem::transmute(&vertices), gl::DYNAMIC_DRAW);
 
         gl::UseProgram(shader_program);
         gl::BindFragDataLocation(shader_program, 0, CString::new("out_color").unwrap().as_ptr());
@@ -97,7 +140,8 @@ fn main() {
         gl::VertexAttribPointer(pos_attr as GLuint, 2, gl::FLOAT,
                                 gl::FALSE as GLboolean, 0, ptr::null());
     }
-
+    let mut fps = calculate::Fps::new(calculate::get_current_time());
+    let mut i = 0;
     let mut running = true;
     while running {
         events_loop.poll_events(|event| {
@@ -116,7 +160,10 @@ fn main() {
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
         }
 
+        //println!("{:?}",duration.as_secs());
         gl_window.swap_buffers().unwrap();
+        fps.show_fps();
+
     }
 }
 
