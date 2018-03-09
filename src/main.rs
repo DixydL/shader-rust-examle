@@ -122,18 +122,18 @@ mod matrix {
             vec
         }
     }
-//    impl Mul for Matrix {
-//        type Output = Self;
-//        fn mul(self, other: Self) -> Self{
-//            let vec = Matrix::matrix_mul(self,other);
-//            Matrix::mat4(
-//                vec[0][0],vec[0][1],vec[0][2],vec[0][3],
-//                vec[1][0],vec[1][1],vec[1][2],vec[1][3],
-//                vec[2][0],vec[2][1],vec[2][2],vec[2][3],
-//                vec[3][0],vec[3][1],vec[3][2],vec[3][3],
-//            )
-//        }
-//    }
+    impl Mul for Matrix {
+        type Output = Self;
+        fn mul(self, other: Self) -> Self{
+            let vec = Matrix::matrix_mul(self,other);
+            Matrix::mat4(
+                vec[0][0],vec[0][1],vec[0][2],vec[0][3],
+                vec[1][0],vec[1][1],vec[1][2],vec[1][3],
+                vec[2][0],vec[2][1],vec[2][2],vec[2][3],
+                vec[3][0],vec[3][1],vec[3][2],vec[3][3],
+            )
+        }
+    }
 }
 mod shader_mod {
 
@@ -206,8 +206,9 @@ fn main() {
         0.0,0.0,0.0,1.0,
     );
 
-    let mat = matrix::Matrix::matrix_mul(mat1,mat2);
-
+    let mat = mat1 * mat2;
+    println!("{:?}" , mat);
+    let mat = [1.,1.];
     unsafe {
         let vertex_shader : GLuint = gl::CreateShader(gl::VERTEX_SHADER);
         let vShaderCode = CString::new(shader_mod::SHADER_VERTEX.as_bytes()).unwrap();
