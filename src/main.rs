@@ -81,6 +81,48 @@ mod matrix {
               mat8 : [m41,m42,m43,m44],
           }
         }
+
+        pub fn translate (x: f32, y: f32, z: f32) -> Matrix {
+            let mut mat4 = Matrix::get_simple_matrix_4();
+            mat4[0][3] = x;
+            mat4[1][3] = y;
+            mat4[2][3] = z;
+
+            Matrix::set_matrix(mat4)
+        }
+
+//        pub fn rolate () -> Matrix {
+//
+//        }
+
+        fn set_matrix(vec : Vec<Vec<f32>>) -> Matrix{
+            Matrix::mat4(
+                vec[0][0],vec[0][1],vec[0][2],vec[0][3],
+                vec[1][0],vec[1][1],vec[1][2],vec[1][3],
+                vec[2][0],vec[2][1],vec[2][2],vec[2][3],
+                vec[3][0],vec[3][1],vec[3][2],vec[3][3],
+            )
+        }
+
+        pub fn get_matrix (&self) -> Vec<f32> {
+           vec![
+               self.mat1[0],self.mat1[1],self.mat1[2],self.mat1[3],
+               self.mat2[0],self.mat2[1],self.mat2[2],self.mat2[3],
+               self.mat3[0],self.mat3[1],self.mat3[2],self.mat3[3],
+               self.mat4[0],self.mat4[1],self.mat4[2],self.mat4[3],
+           ]
+        }
+
+        fn get_simple_matrix_4 () ->Vec<Vec<f32>>{
+            vec!
+            [
+                vec![1.0,0.0,0.0,0.0],
+                vec![0.0,1.0,0.0,0.0],
+                vec![0.0,0.0,1.0,0.0],
+                vec![0.0,0.0,0.0,1.0],
+            ]
+
+        }
         pub fn vector_mul(vec1:&[f32],vec2:&[f32]) -> Vec<f32>{
             let mut m_index = 0;
             let mut m = 0.;
@@ -193,22 +235,6 @@ fn main() {
     let mut VAO : GLuint = 0;
     let mut shader_program: GLuint = 0;
 
-    let mat1 = matrix::Matrix::mat4(
-        1.0,0.0,0.0,1.0,
-        0.0,1.0,0.0,0.0,
-        0.0,0.0,1.0,0.0,
-        0.0,0.0,0.0,1.0,
-    );
-    let mat2 = matrix::Matrix::mat4(
-        1.0,0.0,0.0,0.0,
-        0.0,1.0,0.0,0.0,
-        0.0,0.0,1.0,0.0,
-        0.0,0.0,0.0,1.0,
-    );
-
-    let mat = mat1 * mat2;
-    println!("{:?}" , mat);
-    let mat = [1.,1.];
     unsafe {
         let vertex_shader : GLuint = gl::CreateShader(gl::VERTEX_SHADER);
         let vShaderCode = CString::new(shader_mod::SHADER_VERTEX.as_bytes()).unwrap();
@@ -253,9 +279,24 @@ fn main() {
         gl::EnableVertexAttribArray(0);
     }
     let mut fps = calculate::Fps::new(calculate::get_current_time());
-    let mut i = 0;
+    let mut i = 0.;
+    let mut status = false;
+    let mut status_plus = true;
     let mut running = true;
     while running {
+        if i <= 1. && !status {
+            i += 0.005;
+        }else {
+            status = true;
+        }
+
+        if i >= -1. && status {
+            i -= 0.005;
+        }
+        else {
+            status = false;
+        }
+
         events_loop.poll_events(|event| {
             match event {
                 glutin::Event::WindowEvent{ event, .. } => match event {
@@ -270,9 +311,20 @@ fn main() {
         unsafe {
             let model :GLint = gl::GetUniformLocation(shader_program, CString::new("model").unwrap().as_ptr());
             gl::BindVertexArray(VAO);
+
+            let matrix = matrix::Matrix::translate(0.0+i,0.2+i/2.,0.);
+            let mat = matrix.get_matrix();
+
             gl::UniformMatrix4fv(model, 1, gl::FALSE, mat.as_ptr() as *const f32);
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            for j in 0..1000 {
+                let matrix = matrix::Matrix::translate(0.0 + i + (j as f32) / 10., (-0.5 + i / 2.) + (j as f32) / 100., 0.);
+                let mat = matrix.get_matrix();
+
+                gl::UniformMatrix4fv(model, 1, gl::FALSE, mat.as_ptr() as *const f32);
+                gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            }
             gl::BindVertexArray(0);
         }
 
