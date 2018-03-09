@@ -1,7 +1,6 @@
 extern crate gl;
 extern crate glutin;
 use std::ffi::{CString, CStr};
-use std::ops::Mul;
 use std::mem;
 use gl::types::*;
 use std::ptr;
@@ -49,6 +48,7 @@ mod calculate {
 }
 
 mod matrix {
+    use std::ops::Mul;
     #[derive(Debug)]
     pub struct Matrix {
        mat1 :[f32;4],
@@ -81,30 +81,57 @@ mod matrix {
               mat8 : [m41,m42,m43,m44],
           }
         }
-        pub fn vector_mul(vec1:&[f32],vec2:&[f32]) -> f32{
+        pub fn vector_mul(vec1:&[f32],vec2:&[f32]) -> Vec<f32>{
             let mut m_index = 0;
             let mut m = 0.;
+            let mut vec: Vec<f32> = Vec::new();
             for i in 0..4 {
-                 m = m + (vec1[i] * vec2[i]);
+                m = vec1[i] * vec2[i];
+                vec.push(m);
             }
-            m
+            vec
         }
-        pub fn matrix_mul (mat1: Matrix, mat2: Matrix) -> Vec<Vec<f32>> {
+        pub fn vector_add(vec1:&[f32],vec2:&[f32]) -> Vec<f32>{
+            let mut m_index = 0;
+            let mut m = 0.;
             let mut vec = Vec::new();
             for i in 0..4 {
-                let m1 = Matrix::vector_mul(&mat1.mat1,&mat2.mat5);
-                let m2 = Matrix::vector_mul(&mat1.mat2,&mat2.mat6);
-                let m3 = Matrix::vector_mul(&mat1.mat3,&mat2.mat7);
-                let m4 = Matrix::vector_mul(&mat1.mat4,&mat2.mat8);
-                vec.push(vec![m1,m2,m3,m4]);
+                m = vec1[i] + vec2[i];
+                vec.push(m);
             }
-            println!("{:?},",vec);
+            vec
+        }
+        pub fn matrix_mul (mat1: Matrix, mat2: Matrix) -> Vec<Vec<f32>> {
+                let m1 = Matrix::vector_mul(&mat1.mat1,&mat2.mat1);
+                let m2 = Matrix::vector_mul(&mat1.mat2,&mat2.mat2);
+                let m3 = Matrix::vector_mul(&mat1.mat3,&mat2.mat3);
+                let m4 = Matrix::vector_mul(&mat1.mat4,&mat2.mat4);
+                let vec = vec![m1,m2,m3,m4];
+                println!("vec: {:?},",vec);
+            vec
+        }
+
+        pub fn matrix_add (mat1: Matrix, mat2: Matrix) -> Vec<Vec<f32>> {
+
+                let m1 = Matrix::vector_add(&mat1.mat1,&mat2.mat1);
+                let m2 = Matrix::vector_add(&mat1.mat2,&mat2.mat2);
+                let m3 = Matrix::vector_add(&mat1.mat3,&mat2.mat3);
+                let m4 = Matrix::vector_add(&mat1.mat4,&mat2.mat4);
+                let vec =vec![m1,m2,m3,m4] ;
+            println!("vec: {:?},",vec);
             vec
         }
     }
 //    impl Mul for Matrix {
-//        fn mul(self, other: Self){
-//
+//        type Output = Self;
+//        fn mul(self, other: Self) -> Self{
+//            let vec = Matrix::matrix_mul(self,other);
+//            Matrix::mat4(
+//                vec[0][0],vec[0][1],vec[0][2],vec[0][3],
+//                vec[1][0],vec[1][1],vec[1][2],vec[1][3],
+//                vec[2][0],vec[2][1],vec[2][2],vec[2][3],
+//                vec[3][0],vec[3][1],vec[3][2],vec[3][3],
+//            )
 //        }
 //    }
 }
@@ -167,7 +194,7 @@ fn main() {
     let mut shader_program: GLuint = 0;
 
     let mat1 = matrix::Matrix::mat4(
-        1.0,0.0,0.0,0.0,
+        1.0,0.0,0.0,1.0,
         0.0,1.0,0.0,0.0,
         0.0,0.0,1.0,0.0,
         0.0,0.0,0.0,1.0,
@@ -179,8 +206,8 @@ fn main() {
         0.0,0.0,0.0,1.0,
     );
 
-    matrix::Matrix::matrix_mul(mat1,mat2);
-    let mat = [0.,0.1] ;
+    let mat = matrix::Matrix::matrix_mul(mat1,mat2);
+
     unsafe {
         let vertex_shader : GLuint = gl::CreateShader(gl::VERTEX_SHADER);
         let vShaderCode = CString::new(shader_mod::SHADER_VERTEX.as_bytes()).unwrap();
@@ -242,7 +269,7 @@ fn main() {
         unsafe {
             let model :GLint = gl::GetUniformLocation(shader_program, CString::new("model").unwrap().as_ptr());
             gl::BindVertexArray(VAO);
-            gl::UniformMatrix4fv(model, 1, gl::FALSE, mat.as_ptr());
+            gl::UniformMatrix4fv(model, 1, gl::FALSE, mat.as_ptr() as *const f32);
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
             gl::BindVertexArray(0);
