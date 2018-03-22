@@ -80,6 +80,7 @@ fn main() {
         let matrix = Matrix::orthographic(width/2f32,-width/2f32,height/2f32,-height/2f32,fear,0.1);
         let mat_ortho = matrix.get_matrix();
 
+
         gl::UniformMatrix4fv(ortho, 1, gl::FALSE, mat_ortho.as_ptr() as *const f32);
 
         println!("{:?}",mat_ortho);
@@ -109,11 +110,18 @@ fn main() {
                 glutin::Event::WindowEvent{ event, .. } => match event {
                     glutin::WindowEvent::Closed => running = false,
                     glutin::WindowEvent::Resized(w, h) => gl_window.resize(w, h),
+                    glutin::WindowEvent::KeyboardInput {input, ..} => println!("{:?}",input),
+
                     _ => ()
                 },
                 _ => ()
             }
+
+
+
+
         });
+
 
         unsafe {
             let model :GLint = gl::GetUniformLocation(shader_program, CString::new("model").unwrap().as_ptr());
