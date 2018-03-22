@@ -1,19 +1,20 @@
 extern crate gl;
 extern crate glutin;
-mod matrix;
+extern crate ma_rgl;
 mod shader;
 mod fps_calculate;
 
+use ma_rgl::matrix::Matrix;
 use std::ffi::{CString, CStr};
 use std::mem;
 use shader::shader_mod;
 use fps_calculate::calculate;
-use matrix::matrix::Matrix;
 use gl::types::*;
 use std::ptr;
 use glutin::GlContext;
 
 fn main() {
+    let (width,height,fear,near) = (1028f32,600f32,100f32,0.1f32);
     let shader = shader_mod::Shader::new(shader_mod::SHADER_VERTEX);
     shader.load();
     let mut events_loop = glutin::EventsLoop::new();
@@ -54,12 +55,10 @@ fn main() {
 
         let vertices :[GLfloat; 6] =
         [
-             0.1, 0.1,
-             0.3, -0.1, //left
-            -0.1, -0.1 //right
+             10.1, 10.1,
+             10.3, -10.1, //left
+            -10.1, -10.1 //right
         ];
-        gl::Viewport(0, 0, 600, 600);
-
         gl::GenVertexArrays(1, &mut VAO);
         gl::GenBuffers(1, &mut VBO);
         // Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
@@ -75,6 +74,16 @@ fn main() {
         gl::VertexAttribPointer(0, 2, gl::FLOAT,
                                 gl::FALSE, 0, ptr::null());
         gl::EnableVertexAttribArray(0);
+
+        let ortho :GLint = gl::GetUniformLocation(shader_program, CString::new("ortho").unwrap().as_ptr());
+
+        let matrix = Matrix::orthographic(width/2f32,-width/2f32,height/2f32,-height/2f32,fear,0.1);
+        let mat_ortho = matrix.get_matrix();
+
+        gl::UniformMatrix4fv(ortho, 1, gl::FALSE, mat_ortho.as_ptr() as *const f32);
+
+        println!("{:?}",mat_ortho);
+
     }
     let mut fps = calculate::Fps::new(calculate::get_current_time());
     let mut i = 0.;
@@ -82,14 +91,14 @@ fn main() {
     let mut status_plus = true;
     let mut running = true;
     while running {
-        if i <= 1. && !status {
-            i += 0.005;
+        if i <= 300. && !status {
+            i += 1.;
         }else {
             status = true;
         }
 
-        if i >= -1. && status {
-            i -= 0.005;
+        if i >= -300. && status {
+            i -= 1.;
         }
         else {
             status = false;
@@ -110,19 +119,12 @@ fn main() {
             let model :GLint = gl::GetUniformLocation(shader_program, CString::new("model").unwrap().as_ptr());
             gl::BindVertexArray(VAO);
 
-            let matrix = Matrix::translate(0.0+i,0.2+i/2.,0.);
+            let matrix = Matrix::translate(0.0+i,0.0+i,0.);
             let mat = matrix.get_matrix();
 
-            gl::UniformMatrix4fv(model, 1, gl::FALSE, mat.as_ptr() as *const f32);
             gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::UniformMatrix4fv(model, 1, gl::FALSE, mat.as_ptr() as *const f32);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
-            for j in 0..1000 {
-                let matrix = Matrix::translate(0.0 + i + (j as f32) / 10., (-0.5 + i / 2.) + (j as f32) / 100., 0.);
-                let mat = matrix.get_matrix();
-
-                gl::UniformMatrix4fv(model, 1, gl::FALSE, mat.as_ptr() as *const f32);
-                gl::DrawArrays(gl::TRIANGLES, 0, 3);
-            }
             gl::BindVertexArray(0);
         }
 

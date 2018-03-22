@@ -5,8 +5,10 @@ pub mod shader_mod {
         #version 330
         layout (location = 0) in vec2 position;
         uniform mat4 model;
+        uniform mat4 ortho;
+
         void main() {
-            gl_Position = model * vec4(position.x,position.y, 1.0, 1.0);
+             gl_Position = ortho * model * vec4(position.x,position.y, 1.0, 1.0);
         }
     "
     ;
@@ -19,6 +21,13 @@ pub mod shader_mod {
     }";
     pub struct Shader<'a> {
         shader: &'a str
+
+//        gl_Position = mat4(
+//        0.02,0.0,0.0,0.0,
+//0.0,0.02,0.0,0.0,
+//0.0,0.0,1.0,0.0,
+//    0.0,0.0,0.0,1.0
+//    )
     }
 
     impl<'a> Shader<'a> {

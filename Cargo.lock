@@ -81,6 +81,7 @@ version = "0.1.0"
 dependencies = [
  "gl 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glutin 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ma_rgl 0.2.1",
 ]
 
 [[package]]
@@ -218,6 +219,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "ma_rgl"
+version = "0.2.1"
 
 [[package]]
 name = "malloc_buf"

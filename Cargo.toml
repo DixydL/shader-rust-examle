@@ -7,4 +7,9 @@ authors = ["dixyd <dixeed@gmail.com>"]
 [dependencies]
 gl = "*"
 glutin = "*"
+ma_rgl = "0.2.1"
+
+[patch.crates-io]
+ma_rgl = { path = "/home/dix/IdeaProjects/maRGL" }
+
 
