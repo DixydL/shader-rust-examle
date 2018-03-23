@@ -10,6 +10,6 @@ glutin = "*"
 ma_rgl = "0.2.1"
 
 [patch.crates-io]
-ma_rgl = { path = "/home/dixo/IdeaProjects/ma_rgl" }
+ma_rgl = { path = "/home/dix/IdeaProjects/maRGL" }
 
 

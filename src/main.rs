@@ -12,13 +12,24 @@ use fps_calculate::calculate;
 use gl::types::*;
 use std::ptr;
 use glutin::GlContext;
-use glutin:: {VirtualKeyCode};
+use glutin::VirtualKeyCode;
+use std::default::Default;
 
 
+mod keyboard {
+    struct KeyCode {
+        pressed: bool,
+        key: i32
+    }
+
+    impl KeyCode {
+            fn new(){
+
+            }
+    }
+}
 fn main() {
     let (width,height,fear,near) = (1028f32,600f32,100f32,0.1f32);
-    let shader = shader_mod::Shader::new(shader_mod::SHADER_VERTEX);
-    shader.load();
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new()
         .with_title("Hello, world!")
@@ -35,25 +46,19 @@ fn main() {
     let mut VBO : GLuint= 0;
     let mut VAO : GLuint = 0;
     let mut shader_program: GLuint = 0;
-
+    let mut  program : shader_mod::Program;
     unsafe {
-        let vertex_shader : GLuint = gl::CreateShader(gl::VERTEX_SHADER);
         let vShaderCode = CString::new(shader_mod::SHADER_VERTEX.as_bytes()).unwrap();
-        gl::ShaderSource(vertex_shader, 1, &vShaderCode.as_ptr(), ptr::null());
-        gl::CompileShader(vertex_shader);
+        let vector = shader::shader_mod::Shader::new(&vShaderCode);
+        let vertex_shader = vector.compile(shader_mod::VERTEX);
 
-        let fragment_shader : GLuint = gl::CreateShader(gl::FRAGMENT_SHADER);
         let fShaderCode = CString::new(shader_mod::SHADER_FRAGMENT.as_bytes()).unwrap();
-        gl::ShaderSource(fragment_shader, 1, &fShaderCode.as_ptr(), ptr::null());
-        gl::CompileShader(fragment_shader);
+        let fragment = shader::shader_mod::Shader::new(&fShaderCode);
+        let fragment_shader = fragment.compile(shader_mod::FRAGMENT);
 
-        shader_program = gl::CreateProgram();
-        gl::AttachShader(shader_program, vertex_shader);
-        gl::AttachShader(shader_program, fragment_shader);
-        gl::LinkProgram(shader_program);
+        program = shader_mod::Shader::attach_shader(&vertex_shader,&fragment_shader);
+        shader_program = program.get_program();
 
-       // gl::DeleteShader(vertex_shader);
-       // gl::DeleteShader(fragment_shader);
 
         let vertices :[GLfloat; 6] =
         [
@@ -68,8 +73,7 @@ fn main() {
 
         gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
         gl::BufferData(gl::ARRAY_BUFFER,(6*std::mem::size_of::<GLfloat>()) as GLsizeiptr, std::mem::transmute(&vertices[0]), gl::DYNAMIC_DRAW);
-
-        gl::UseProgram(shader_program);
+        program.gl_use_program();
         gl::BindFragDataLocation(shader_program, 0, CString::new("out_color").unwrap().as_ptr());
 
         // Specify the layout of the vertex data
@@ -77,30 +81,33 @@ fn main() {
                                 gl::FALSE, 0, ptr::null());
         gl::EnableVertexAttribArray(0);
 
-        let ortho :GLint = gl::GetUniformLocation(shader_program, CString::new("ortho").unwrap().as_ptr());
-
         let matrix = Matrix::orthographic(width/2f32,-width/2f32,height/2f32,-height/2f32,fear,0.1);
         let mat_ortho = matrix.get_matrix();
 
-
-        gl::UniformMatrix4fv(ortho, 1, gl::FALSE, mat_ortho.as_ptr() as *const f32);
-
-        println!("{:?}",mat_ortho);
+        program.uniform_matrix("ortho",mat_ortho);
 
     }
     let mut fps = calculate::Fps::new(calculate::get_current_time());
-    let mut i = 0.;
+    let mut y = 0.;
+    let mut x = 0.;
     let mut status = false;
     let mut status_plus = true;
     let mut running = true;
-    let mut key_pressed  = "";
+    let mut grab = false;
+    let mut key_pressed  = Default::default();
     while running {
 
-        if key_pressed == "W" {
-            i+= 1.;
+        if key_pressed == "W" && grab {
+            y+= 1.;
         }
-        if key_pressed == "S" {
-            i-= 1.;
+        if key_pressed == "S" && grab {
+            y-= 1.;
+        }
+        if key_pressed == "A" && grab {
+            x-= 1.;
+        }
+        if key_pressed == "D" && grab {
+            x+= 1.;
         }
 
         events_loop.poll_events(|event| {
@@ -109,13 +116,24 @@ fn main() {
                     glutin::WindowEvent::Closed => running = false,
                     glutin::WindowEvent::Resized(w, h) => gl_window.resize(w, h),
 
-                    glutin::WindowEvent::KeyboardInput {input, ..} => match input.virtual_keycode.unwrap() {
-                        VirtualKeyCode::W =>  key_pressed = "W",
-                        VirtualKeyCode::S =>  key_pressed = "S",
-                        VirtualKeyCode::D =>  key_pressed = "D",
-                        VirtualKeyCode::A =>  key_pressed = "A",
-                        _ => println!("{:?}",input)
+                    glutin::WindowEvent::KeyboardInput {input, ..} => match input {
+                        glutin::KeyboardInput {state, virtual_keycode, ..} => {
+                            if state == glutin::ElementState::Pressed {
+                                grab = true;
+                            } else {
+                                grab = false;
+                            }
+                            match virtual_keycode.unwrap() {
+                                VirtualKeyCode::W => key_pressed = "W",
+                                VirtualKeyCode::S => key_pressed = "S",
+                                VirtualKeyCode::A => key_pressed = "A",
+                                VirtualKeyCode::D => key_pressed = "D",
+                                _ => key_pressed = "",
+                            }
 
+                        },
+
+                        _ => println!("{:?}", input)
                     },
                     _ => ()
                 },
@@ -129,15 +147,15 @@ fn main() {
 
 
         unsafe {
-            let model :GLint = gl::GetUniformLocation(shader_program, CString::new("model").unwrap().as_ptr());
             gl::BindVertexArray(VAO);
             println!("{}",key_pressed);
-            let matrix = Matrix::translate(0.0,0.0+i,0.);
+            let matrix = Matrix::translate(0.0+x,0.0+y,0.);
             let mat = matrix.get_matrix();
-
+            program.uniform_matrix("model",mat);
             gl::Clear(gl::COLOR_BUFFER_BIT);
-            gl::UniformMatrix4fv(model, 1, gl::FALSE, mat.as_ptr() as *const f32);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
+
+
             gl::BindVertexArray(0);
         }
 
