@@ -12,6 +12,8 @@ use fps_calculate::calculate;
 use gl::types::*;
 use std::ptr;
 use glutin::GlContext;
+use glutin:: {VirtualKeyCode};
+
 
 fn main() {
     let (width,height,fear,near) = (1028f32,600f32,100f32,0.1f32);
@@ -91,18 +93,14 @@ fn main() {
     let mut status = false;
     let mut status_plus = true;
     let mut running = true;
+    let mut key_pressed  = "";
     while running {
-        if i <= 300. && !status {
-            i += 1.;
-        }else {
-            status = true;
-        }
 
-        if i >= -300. && status {
-            i -= 1.;
+        if key_pressed == "W" {
+            i+= 1.;
         }
-        else {
-            status = false;
+        if key_pressed == "S" {
+            i-= 1.;
         }
 
         events_loop.poll_events(|event| {
@@ -110,8 +108,15 @@ fn main() {
                 glutin::Event::WindowEvent{ event, .. } => match event {
                     glutin::WindowEvent::Closed => running = false,
                     glutin::WindowEvent::Resized(w, h) => gl_window.resize(w, h),
-                    glutin::WindowEvent::KeyboardInput {input, ..} => println!("{:?}",input),
 
+                    glutin::WindowEvent::KeyboardInput {input, ..} => match input.virtual_keycode.unwrap() {
+                        VirtualKeyCode::W =>  key_pressed = "W",
+                        VirtualKeyCode::S =>  key_pressed = "S",
+                        VirtualKeyCode::D =>  key_pressed = "D",
+                        VirtualKeyCode::A =>  key_pressed = "A",
+                        _ => println!("{:?}",input)
+
+                    },
                     _ => ()
                 },
                 _ => ()
@@ -126,8 +131,8 @@ fn main() {
         unsafe {
             let model :GLint = gl::GetUniformLocation(shader_program, CString::new("model").unwrap().as_ptr());
             gl::BindVertexArray(VAO);
-
-            let matrix = Matrix::translate(0.0+i,0.0+i,0.);
+            println!("{}",key_pressed);
+            let matrix = Matrix::translate(0.0,0.0+i,0.);
             let mat = matrix.get_matrix();
 
             gl::Clear(gl::COLOR_BUFFER_BIT);
@@ -138,7 +143,7 @@ fn main() {
 
         //println!("{:?}",duration.as_secs());
         gl_window.swap_buffers().unwrap();
-        fps.show_fps();
+       // fps.show_fps();
 
     }
 }
